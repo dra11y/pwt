@@ -1,37 +1,34 @@
 [package]
 name = "pwt"
-version = "0.6.2"
+version = "0.7.0"
 edition = "2024"
 authors = ["Tom Grushka <tom@dra11y.com>", "andreasewering"]
 
 license = "	BSD-3-Clause"
 description = "Create, verify and decode protobuf web tokens - with protobuf instead of prost"
-homepage = "https://github.com/andreasewering/protobuf-web-tokens"
-documentation = "https://github.com/andreasewering/protobuf-web-tokens"
-repository = "https://github.com/andreasewering/protobuf-web-tokens"
+homepage = "https://github.com/dra11y/pwt"
+documentation = "https://github.com/dra11y/pwt"
+repository = "https://github.com/dra11y/pwt"
 readme = "README.md"
 keywords = ["protobuf", "web", "token"]
 categories = ["authentication", "encoding"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
 
 [dependencies]
-prost = "0.13"
 ed25519-dalek = { version = "2.1.1", features = ["pem"] }
 base64 = "0.22"
-prost-types = "0.13"
+protobuf = "3.7.2"
 
 [build-dependencies]
-prost-build = "0.13"
+protobuf-codegen = "3.7.2"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 josekit = "0.10.0"
-serde = "1.0.214"
-serde_json = "1.0.132"
-rand = "0.8.5"
+serde = "1"
+serde_json = "1"
+rand = "0.9"
 
 [[bench]]
 name = "pwt_vs_jwt"

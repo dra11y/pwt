@@ -69,7 +69,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 }
 
 mod proto {
-    include!(concat!(env!("OUT_DIR"), "/test.rs"));
+    // include!(concat!(env!("OUT_DIR"), "/test.rs"));
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
