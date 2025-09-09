@@ -1,9 +1,9 @@
 use std::time::Duration;
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use prost::Message;
-use protobuf_web_token::{self, Signer};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use pwt::{self, Signer};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 #[path = "../src/jwt.rs"]
 mod jwt;
 
@@ -78,10 +78,10 @@ struct Simple {
 }
 
 fn init_pwt_signer() -> Signer {
-    use protobuf_web_token::ed25519::pkcs8::DecodePrivateKey;
+    use pwt::ed25519::pkcs8::DecodePrivateKey;
     let pem = std::fs::read("test_resources/private.pem").unwrap();
     let pem = String::from_utf8(pem).unwrap();
-    let key = protobuf_web_token::ed25519::SigningKey::from_pkcs8_pem(&pem).unwrap();
+    let key = pwt::ed25519::SigningKey::from_pkcs8_pem(&pem).unwrap();
     Signer::new(key)
 }
 

@@ -1,18 +1,17 @@
 [package]
-name = "protobuf-web-token"
-version = "0.6.1"
-edition = "2021"
-
+name = "pwt"
+version = "0.6.2"
+edition = "2024"
+authors = ["Tom Grushka <tom@dra11y.com>", "andreasewering"]
 
 license = "	BSD-3-Clause"
-description = "Create, verify and decode protobuf web tokens"
+description = "Create, verify and decode protobuf web tokens - with protobuf instead of prost"
 homepage = "https://github.com/andreasewering/protobuf-web-tokens"
 documentation = "https://github.com/andreasewering/protobuf-web-tokens"
 repository = "https://github.com/andreasewering/protobuf-web-tokens"
 readme = "README.md"
 keywords = ["protobuf", "web", "token"]
 categories = ["authentication", "encoding"]
-
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

@@ -1,5 +1,7 @@
 # Protobuf Web Token (PWT)
 
+WIP: Fork of [protobuf-web-token](https://crates.io/crates/protobuf-web-token) to switch to protobuf instead of prost
+
 Collection of libraries for different languages to implement signing/verification/decoding of tokens.
 The approach is similar to the one used in [JWT](https://jwt.io/introduction) (Json Web Token).
 The rest of this README assumes that you are familiar what JWTs are used for.
