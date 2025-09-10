@@ -24,6 +24,181 @@
 /// of protobuf runtime.
 const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_3_7_2;
 
+// @@protoc_insertion_point(message:test.UserClaims)
+#[derive(PartialEq,Clone,Default,Debug)]
+pub struct UserClaims {
+    // message fields
+    // @@protoc_insertion_point(field:test.UserClaims.user_id)
+    pub user_id: i64,
+    // @@protoc_insertion_point(field:test.UserClaims.username)
+    pub username: ::std::string::String,
+    // @@protoc_insertion_point(field:test.UserClaims.email)
+    pub email: ::std::string::String,
+    // @@protoc_insertion_point(field:test.UserClaims.roles)
+    pub roles: ::std::vec::Vec<::protobuf::EnumOrUnknown<Role>>,
+    // special fields
+    // @@protoc_insertion_point(special_field:test.UserClaims.special_fields)
+    pub special_fields: ::protobuf::SpecialFields,
+}
+
+impl<'a> ::std::default::Default for &'a UserClaims {
+    fn default() -> &'a UserClaims {
+        <UserClaims as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl UserClaims {
+    pub fn new() -> UserClaims {
+        ::std::default::Default::default()
+    }
+
+    fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
+        let mut fields = ::std::vec::Vec::with_capacity(4);
+        let mut oneofs = ::std::vec::Vec::with_capacity(0);
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "user_id",
+            |m: &UserClaims| { &m.user_id },
+            |m: &mut UserClaims| { &mut m.user_id },
+        ));
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "username",
+            |m: &UserClaims| { &m.username },
+            |m: &mut UserClaims| { &mut m.username },
+        ));
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "email",
+            |m: &UserClaims| { &m.email },
+            |m: &mut UserClaims| { &mut m.email },
+        ));
+        fields.push(::protobuf::reflect::rt::v2::make_vec_simpler_accessor::<_, _>(
+            "roles",
+            |m: &UserClaims| { &m.roles },
+            |m: &mut UserClaims| { &mut m.roles },
+        ));
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<UserClaims>(
+            "UserClaims",
+            fields,
+            oneofs,
+        )
+    }
+}
+
+impl ::protobuf::Message for UserClaims {
+    const NAME: &'static str = "UserClaims";
+
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
+        while let Some(tag) = is.read_raw_tag_or_eof()? {
+            match tag {
+                8 => {
+                    self.user_id = is.read_int64()?;
+                },
+                18 => {
+                    self.username = is.read_string()?;
+                },
+                26 => {
+                    self.email = is.read_string()?;
+                },
+                32 => {
+                    self.roles.push(is.read_enum_or_unknown()?);
+                },
+                34 => {
+                    ::protobuf::rt::read_repeated_packed_enum_or_unknown_into(is, &mut self.roles)?
+                },
+                tag => {
+                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u64 {
+        let mut my_size = 0;
+        if self.user_id != 0 {
+            my_size += ::protobuf::rt::int64_size(1, self.user_id);
+        }
+        if !self.username.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.username);
+        }
+        if !self.email.is_empty() {
+            my_size += ::protobuf::rt::string_size(3, &self.email);
+        }
+        my_size += ::protobuf::rt::vec_packed_enum_or_unknown_size(4, &self.roles);
+        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
+        self.special_fields.cached_size().set(my_size as u32);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
+        if self.user_id != 0 {
+            os.write_int64(1, self.user_id)?;
+        }
+        if !self.username.is_empty() {
+            os.write_string(2, &self.username)?;
+        }
+        if !self.email.is_empty() {
+            os.write_string(3, &self.email)?;
+        }
+        os.write_repeated_packed_enum_or_unknown(4, &self.roles)?;
+        os.write_unknown_fields(self.special_fields.unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn special_fields(&self) -> &::protobuf::SpecialFields {
+        &self.special_fields
+    }
+
+    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
+        &mut self.special_fields
+    }
+
+    fn new() -> UserClaims {
+        UserClaims::new()
+    }
+
+    fn clear(&mut self) {
+        self.user_id = 0;
+        self.username.clear();
+        self.email.clear();
+        self.roles.clear();
+        self.special_fields.clear();
+    }
+
+    fn default_instance() -> &'static UserClaims {
+        static instance: UserClaims = UserClaims {
+            user_id: 0,
+            username: ::std::string::String::new(),
+            email: ::std::string::String::new(),
+            roles: ::std::vec::Vec::new(),
+            special_fields: ::protobuf::SpecialFields::new(),
+        };
+        &instance
+    }
+}
+
+impl ::protobuf::MessageFull for UserClaims {
+    fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("UserClaims").unwrap()).clone()
+    }
+}
+
+impl ::std::fmt::Display for UserClaims {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for UserClaims {
+    type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
+}
+
 // @@protoc_insertion_point(message:test.Simple)
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct Simple {
@@ -553,16 +728,20 @@ impl Role {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x19tests/fixtures/test.proto\x12\x04test\"'\n\x06Simple\x12\x1d\n\nso\
-    me_claim\x18\x02\x20\x01(\tR\tsomeClaim\"\x9d\x01\n\x07Complex\x12\x17\n\
-    \x07user_id\x18\x01\x20\x01(\x03R\x06userId\x12$\n\x06nested\x18\x02\x20\
-    \x01(\x0b2\x0c.test.NestedR\x06nested\x12\x1b\n\tuser_name\x18\x03\x20\
-    \x01(\tR\x08userName\x12\x14\n\x05email\x18\x04\x20\x01(\tR\x05email\x12\
-    \x20\n\x05roles\x18\x05\x20\x03(\x0e2\n.test.RoleR\x05roles\">\n\x06Nest\
-    ed\x12\x17\n\x07team_id\x18\x01\x20\x01(\x03R\x06teamId\x12\x1b\n\tteam_\
-    name\x18\x02\x20\x01(\tR\x08teamName*X\n\x04Role\x12\x12\n\x0eReadFeatur\
-    eFoo\x10\0\x12\x13\n\x0fWriteFeatureFoo\x10\x01\x12\x12\n\x0eReadFeature\
-    Bar\x10\x02\x12\x13\n\x0fWriteFeatureBar\x10\x03b\x06proto3\
+    \n\x19tests/fixtures/test.proto\x12\x04test\"y\n\nUserClaims\x12\x17\n\
+    \x07user_id\x18\x01\x20\x01(\x03R\x06userId\x12\x1a\n\x08username\x18\
+    \x02\x20\x01(\tR\x08username\x12\x14\n\x05email\x18\x03\x20\x01(\tR\x05e\
+    mail\x12\x20\n\x05roles\x18\x04\x20\x03(\x0e2\n.test.RoleR\x05roles\"'\n\
+    \x06Simple\x12\x1d\n\nsome_claim\x18\x02\x20\x01(\tR\tsomeClaim\"\x9d\
+    \x01\n\x07Complex\x12\x17\n\x07user_id\x18\x01\x20\x01(\x03R\x06userId\
+    \x12$\n\x06nested\x18\x02\x20\x01(\x0b2\x0c.test.NestedR\x06nested\x12\
+    \x1b\n\tuser_name\x18\x03\x20\x01(\tR\x08userName\x12\x14\n\x05email\x18\
+    \x04\x20\x01(\tR\x05email\x12\x20\n\x05roles\x18\x05\x20\x03(\x0e2\n.tes\
+    t.RoleR\x05roles\">\n\x06Nested\x12\x17\n\x07team_id\x18\x01\x20\x01(\
+    \x03R\x06teamId\x12\x1b\n\tteam_name\x18\x02\x20\x01(\tR\x08teamName*X\n\
+    \x04Role\x12\x12\n\x0eReadFeatureFoo\x10\0\x12\x13\n\x0fWriteFeatureFoo\
+    \x10\x01\x12\x12\n\x0eReadFeatureBar\x10\x02\x12\x13\n\x0fWriteFeatureBa\
+    r\x10\x03b\x06proto3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
@@ -580,7 +759,8 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
     file_descriptor.get(|| {
         let generated_file_descriptor = generated_file_descriptor_lazy.get(|| {
             let mut deps = ::std::vec::Vec::with_capacity(0);
-            let mut messages = ::std::vec::Vec::with_capacity(3);
+            let mut messages = ::std::vec::Vec::with_capacity(4);
+            messages.push(UserClaims::generated_message_descriptor_data());
             messages.push(Simple::generated_message_descriptor_data());
             messages.push(Complex::generated_message_descriptor_data());
             messages.push(Nested::generated_message_descriptor_data());

@@ -2,6 +2,8 @@ use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Ensure directories exist
+    fs::remove_dir_all("src/generated")?;
+    fs::remove_dir_all("tests/generated")?;
     fs::create_dir_all("src/generated")?;
     fs::create_dir_all("tests/generated")?;
 

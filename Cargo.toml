@@ -13,8 +13,6 @@ readme = "README.md"
 keywords = ["protobuf", "web", "token"]
 categories = ["authentication", "encoding"]
 
-[lib]
-
 [dependencies]
 base64 = "0.22"
 ed25519-dalek = { version = "2.1.1", features = ["pem"] }
@@ -24,6 +22,7 @@ protobuf = "3.7.2"                                        # 4.32.0 is broken!!
 protobuf-codegen = "3.7.2" # 4.32.0 is broken!!
 
 [dev-dependencies]
+protobuf-codegen = "3.7.2"                                   # 4.32.0 is broken!!
 criterion = { version = "0.5", features = ["html_reports"] }
 josekit = "0.10.0"
 serde = "1"
