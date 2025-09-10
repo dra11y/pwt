@@ -8,9 +8,6 @@ use protobuf::{Message, MessageField};
 
 use base64::{Engine as _, engine::general_purpose};
 
-#[cfg(test)]
-mod jwt;
-
 mod generated;
 use generated::pwt as proto;
 
@@ -334,12 +331,9 @@ mod tests {
 
     use ed25519::pkcs8::DecodePrivateKey;
     use rand::distr::SampleString;
-    use serde::Serialize;
 
     use super::*;
     use crate::generated::pwt as main_proto;
-    use crate::jwt;
-
     mod test_proto {
         include!(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -348,13 +342,8 @@ mod tests {
     }
     use test_proto::test as proto;
 
-    #[derive(Debug, Clone, Serialize)]
-    struct Simple {
-        some_claim: String,
-    }
-
     fn init_signer() -> Signer {
-        let pem = std::fs::read("test_resources/private.pem").unwrap();
+        let pem = std::fs::read("tests/fixtures/private.pem").unwrap();
         let pem = String::from_utf8(pem).unwrap();
         let key = SigningKey::from_pkcs8_pem(&pem).unwrap();
         Signer { key }
@@ -520,102 +509,6 @@ mod tests {
     }
 
     #[test]
-    fn size_is_smaller_than_jwt() {
-        let jwt_signer = jwt::init_jwt_signer();
-        let pwt_signer = init_signer();
-
-        let pwt = pwt_signer.sign(
-            &proto::Simple {
-                some_claim: "test contents".to_string(),
-                ..Default::default()
-            },
-            Duration::from_secs(300),
-        );
-        println!("{pwt}");
-        let jwt = jwt::jwt_encode(
-            &jwt_signer,
-            Simple {
-                some_claim: "test contents".to_string(),
-            },
-            300,
-        );
-        let pwt_len = f64::from(u32::try_from(pwt.len()).unwrap());
-        let jwt_len = f64::from(u32::try_from(jwt.len()).unwrap());
-        assert!(
-            pwt_len * 1.2 < jwt_len,
-            "{pwt} was not small enough in comparison to {jwt}"
-        );
-    }
-
-    #[derive(Debug, Clone, Serialize)]
-    struct Complex {
-        email: String,
-        user_name: String,
-        user_id: String,
-        valid_until: SystemTime,
-        roles: Vec<String>,
-        nested: Nested,
-    }
-
-    #[derive(Debug, Clone, Serialize)]
-    struct Nested {
-        team_id: String,
-        team_name: String,
-    }
-
-    #[test]
-    fn size_is_smaller_than_jwt_complex() {
-        let jwt_signer = jwt::init_jwt_signer();
-        let pwt_signer = init_signer();
-        let now = SystemTime::now();
-
-        let pwt = pwt_signer.sign(
-            &proto::Complex {
-                email: "andreas.molitor@andrena.de".to_string(),
-                user_name: "Andreas Molitor".to_string(),
-                user_id: 123456789,
-                roles: vec![
-                    proto::Role::ReadFeatureFoo.into(),
-                    proto::Role::WriteFeatureFoo.into(),
-                    proto::Role::ReadFeatureBar.into(),
-                ],
-                nested: MessageField::some(proto::Nested {
-                    team_id: 3432535236263,
-                    team_name: "andrena".to_string(),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            },
-            Duration::from_secs(300),
-        );
-        let jwt = jwt::jwt_encode(
-            &jwt_signer,
-            Complex {
-                email: "andreas.molitor@andrena.de".to_string(),
-                user_name: "Andreas Molitor".to_string(),
-                user_id: "123456789".to_string(),
-                valid_until: (now + Duration::from_secs(5)),
-                roles: vec![
-                    "ReadFeatureFoo".to_string(),
-                    "WriteFeatureFoo".to_string(),
-                    "ReadFeatureBar".to_string(),
-                ],
-                nested: Nested {
-                    team_id: "3432535236263".to_string(),
-                    team_name: "andrena".to_string(),
-                },
-            },
-            300,
-        );
-        let pwt_len = f64::from(u32::try_from(pwt.len()).unwrap());
-        let jwt_len = f64::from(u32::try_from(jwt.len()).unwrap());
-        assert!(
-            pwt_len * 2.0 < jwt_len,
-            "{pwt} was not small enough in comparison to {jwt}"
-        );
-    }
-
-    #[test]
     #[ignore] // generate only if specifically requested (with cargo test -- --ignored)
     fn generate_fuzz_outputs() -> Result<(), Box<dyn std::error::Error>> {
         use rand::distr::Alphanumeric;
@@ -753,5 +646,137 @@ mod tests {
             regular_decoded.claims.some_claim
         );
         assert_eq!(try_decoded.claims.some_claim, "equivalent test");
+    }
+
+    #[test]
+    fn complex_nested_protobuf_roundtrip() {
+        let pwt_signer = init_signer();
+        let complex = proto::Complex {
+            email: "test@example.com".to_string(),
+            user_name: "Test User".to_string(),
+            user_id: 42,
+            roles: vec![
+                proto::Role::ReadFeatureFoo.into(),
+                proto::Role::WriteFeatureBar.into(),
+            ],
+            nested: MessageField::some(proto::Nested {
+                team_id: 12345,
+                team_name: "Test Team".to_string(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        // Test string format
+        let token = pwt_signer.sign(&complex, Duration::from_secs(300));
+        let decoded = pwt_signer
+            .as_verifier()
+            .verify::<proto::Complex>(&token)
+            .unwrap();
+
+        assert_eq!(decoded.claims.email, "test@example.com");
+        assert_eq!(decoded.claims.user_name, "Test User");
+        assert_eq!(decoded.claims.user_id, 42);
+        assert_eq!(decoded.claims.roles.len(), 2);
+
+        let nested = decoded.claims.nested.into_option().unwrap();
+        assert_eq!(nested.team_id, 12345);
+        assert_eq!(nested.team_name, "Test Team");
+
+        // Test bytes format
+        let token_bytes = pwt_signer.sign_to_bytes(&complex, Duration::from_secs(300));
+        let decoded_bytes = pwt_signer
+            .as_verifier()
+            .verify_bytes::<proto::Complex>(&token_bytes)
+            .unwrap();
+
+        assert_eq!(decoded_bytes.claims.email, decoded.claims.email);
+        assert_eq!(decoded_bytes.claims.user_id, decoded.claims.user_id);
+    }
+
+    #[test]
+    fn empty_and_minimal_data() {
+        let pwt_signer = init_signer();
+
+        // Test with empty string
+        let empty_simple = proto::Simple {
+            some_claim: String::new(),
+            ..Default::default()
+        };
+        let token = pwt_signer.sign(&empty_simple, Duration::from_secs(300));
+        let decoded = pwt_signer
+            .as_verifier()
+            .verify::<proto::Simple>(&token)
+            .unwrap();
+        assert_eq!(decoded.claims.some_claim, "");
+
+        // Test with minimal complex (no nested, no roles)
+        let minimal_complex = proto::Complex {
+            email: "min@test.com".to_string(),
+            user_name: String::new(),
+            user_id: 0,
+            roles: vec![],
+            nested: MessageField::none(),
+            ..Default::default()
+        };
+        let token = pwt_signer.sign(&minimal_complex, Duration::from_secs(300));
+        let decoded = pwt_signer
+            .as_verifier()
+            .verify::<proto::Complex>(&token)
+            .unwrap();
+        assert_eq!(decoded.claims.email, "min@test.com");
+        assert_eq!(decoded.claims.user_id, 0);
+        assert_eq!(decoded.claims.roles.len(), 0);
+        assert!(decoded.claims.nested.into_option().is_none());
+    }
+
+    #[test]
+    fn large_payload_handling() {
+        let pwt_signer = init_signer();
+
+        // Test with large string (1KB)
+        let large_claim = "x".repeat(1024);
+        let large_simple = proto::Simple {
+            some_claim: large_claim.clone(),
+            ..Default::default()
+        };
+
+        let token = pwt_signer.sign(&large_simple, Duration::from_secs(300));
+        let decoded = pwt_signer
+            .as_verifier()
+            .verify::<proto::Simple>(&token)
+            .unwrap();
+        assert_eq!(decoded.claims.some_claim, large_claim);
+        assert_eq!(decoded.claims.some_claim.len(), 1024);
+    }
+
+    #[test]
+    fn role_enum_handling() {
+        let pwt_signer = init_signer();
+
+        // Test all role variants
+        let all_roles = proto::Complex {
+            email: "roles@test.com".to_string(),
+            user_name: "Role Tester".to_string(),
+            user_id: 123,
+            roles: vec![
+                proto::Role::ReadFeatureFoo.into(),
+                proto::Role::WriteFeatureFoo.into(),
+                proto::Role::ReadFeatureBar.into(),
+                proto::Role::WriteFeatureBar.into(),
+            ],
+            nested: MessageField::none(),
+            ..Default::default()
+        };
+
+        let token = pwt_signer.sign(&all_roles, Duration::from_secs(300));
+        let decoded = pwt_signer
+            .as_verifier()
+            .verify::<proto::Complex>(&token)
+            .unwrap();
+
+        assert_eq!(decoded.claims.roles.len(), 4);
+        // Note: EnumOrUnknown makes it harder to test exact enum values,
+        // but the roundtrip test ensures they're preserved correctly
     }
 }

@@ -1,7 +1,2 @@
 /target
-/elm-stuff
-/node_modules
 /fuzz
-/tests/Generated
-/tests/Proto
-/dist

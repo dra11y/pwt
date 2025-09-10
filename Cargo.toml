@@ -16,12 +16,12 @@ categories = ["authentication", "encoding"]
 [lib]
 
 [dependencies]
-ed25519-dalek = { version = "2.1.1", features = ["pem"] }
 base64 = "0.22"
-protobuf = "3.7.2"
+ed25519-dalek = { version = "2.1.1", features = ["pem"] }
+protobuf = "3.7.2"                                        # 4.32.0 is broken!!
 
 [build-dependencies]
-protobuf-codegen = "3.7.2"
+protobuf-codegen = "3.7.2" # 4.32.0 is broken!!
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

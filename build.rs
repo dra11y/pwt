@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     protobuf_codegen::Codegen::new()
         .out_dir("tests/generated")
         .include(".")
-        .input("test_resources/test.proto")
+        .input("tests/fixtures/test.proto")
         .run()?;
 
     Ok(())

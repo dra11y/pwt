@@ -1,11 +1,19 @@
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
-use prost::Message;
+use protobuf::{Message, MessageField};
 use pwt::{self, Signer};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
-#[path = "../src/jwt.rs"]
 mod jwt;
+
+// Import the test protobuf types
+mod test_proto {
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/generated/mod.rs"
+    ));
+}
+use test_proto::test as proto;
 
 fn pwt_round_trip<T: Message + Default>(signer: &Signer, value: T) {
     let token = signer.sign(&value, Duration::from_secs(100));
@@ -17,7 +25,6 @@ fn jwt_round_trip<T: Serialize + DeserializeOwned>(signer: &jwt::JwtSigner, clai
     jwt_decode::<T>(signer, &token);
 }
 
-#[cfg(test)]
 fn criterion_benchmark(c: &mut Criterion) {
     let signer = init_pwt_signer();
     let jwt_signer = jwt::init_jwt_signer();
@@ -28,6 +35,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                 &signer,
                 black_box(proto::Simple {
                     some_claim: "test".to_string(),
+                    ..Default::default()
                 }),
             )
         })
@@ -58,18 +66,39 @@ fn criterion_benchmark(c: &mut Criterion) {
                         proto::Role::WriteFeatureFoo.into(),
                         proto::Role::ReadFeatureBar.into(),
                     ],
-                    nested: Some(proto::Nested {
+                    nested: MessageField::some(proto::Nested {
                         team_id: 3432535236263,
                         team_name: "andrena".to_string(),
+                        ..Default::default()
                     }),
+                    ..Default::default()
                 }),
             )
         })
     });
-}
-
-mod proto {
-    // include!(concat!(env!("OUT_DIR"), "/test.rs"));
+    complex_data_group.bench_function("jwt_round_trip", |b| {
+        b.iter(|| {
+            jwt_round_trip(
+                &jwt_signer,
+                black_box(Complex {
+                    email: "tiberius.estor@andrena.de".to_string(),
+                    user_name: "Tiberius".to_string(),
+                    user_id: "123456789".to_string(),
+                    valid_until: SystemTime::now() + Duration::from_secs(300),
+                    roles: vec![
+                        "ReadFeatureFoo".to_string(),
+                        "WriteFeatureFoo".to_string(),
+                        "ReadFeatureBar".to_string(),
+                    ],
+                    nested: Nested {
+                        team_id: "3432535236263".to_string(),
+                        team_name: "andrena".to_string(),
+                    },
+                }),
+            )
+        })
+    });
+    drop(complex_data_group);
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -77,9 +106,25 @@ struct Simple {
     some_claim: String,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct Complex {
+    email: String,
+    user_name: String,
+    user_id: String,
+    valid_until: std::time::SystemTime,
+    roles: Vec<String>,
+    nested: Nested,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct Nested {
+    team_id: String,
+    team_name: String,
+}
+
 fn init_pwt_signer() -> Signer {
     use pwt::ed25519::pkcs8::DecodePrivateKey;
-    let pem = std::fs::read("test_resources/private.pem").unwrap();
+    let pem = std::fs::read("tests/fixtures/private.pem").unwrap();
     let pem = String::from_utf8(pem).unwrap();
     let key = pwt::ed25519::SigningKey::from_pkcs8_pem(&pem).unwrap();
     Signer::new(key)
