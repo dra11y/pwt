@@ -9,7 +9,7 @@ readme:
 # Publish to crates.io
 publish: test readme
     cargo publish --dry-run
-    print "Ready to publish? "
+    printf "Ready to publish? "
     read confirm
     if [ "$confirm" != "Y" ]; then echo "Cancelled."; exit 0; fi
     cargo publish
