@@ -2,7 +2,7 @@
 
 **A Rust library for creating, signing, and verifying compact binary web tokens using Protocol Buffers and Ed25519 signatures.**
 
-This crate is a fork of [`protobuf-web-token`](https://crates.io/crates/protobuf-web-token) that replaces the `prost` dependency with the official `protobuf` crate.
+This crate is a fork of [`protobuf-web-token`](https://crates.io/crates/protobuf-web-token) that replaces the `prost` dependency with the official `protobuf` crate and offers additional improvements. See [Changelog](https://github.com/dra11y/pwt/blob/main/CHANGELOG.md).
 
 ## Why PWT over JWT?
 
