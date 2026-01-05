@@ -10,8 +10,7 @@ readme:
 @publish: test readme
     cargo publish --dry-run
     printf "Ready to publish? "
-    read confirm
-    if [ "$confirm" != "Y" ]; then echo "Cancelled."; exit 0; fi
+    read confirm && if [ "$confirm" != "Y" ]; then echo "Cancelled."; exit 0; fi
     cargo publish
 
 # Run tests
