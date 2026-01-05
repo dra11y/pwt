@@ -7,7 +7,7 @@ readme:
     cargo readme --no-title --no-indent-headings > README.md
 
 # Publish to crates.io
-publish: test readme
+@publish: test readme
     cargo publish --dry-run
     printf "Ready to publish? "
     read confirm
