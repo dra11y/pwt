@@ -1,9 +1,8 @@
 [package]
 name = "pwt"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2024"
 authors = ["Tom Grushka <tom@dra11y.com>", "andreasewering"]
-
 license = "	BSD-3-Clause"
 description = "Create, verify and decode protobuf web tokens - with protobuf instead of prost"
 homepage = "https://github.com/dra11y/pwt"
@@ -12,6 +11,7 @@ repository = "https://github.com/dra11y/pwt"
 readme = "README.md"
 keywords = ["protobuf", "web", "token"]
 categories = ["authentication", "encoding"]
+include = ["pwt.proto"]
 
 [dependencies]
 base64 = "0.22"

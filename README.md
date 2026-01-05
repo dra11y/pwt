@@ -26,8 +26,8 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pwt = "0.7"
-protobuf = "3.7"
+pwt = "0.8"
+protobuf = "3.7" # 4.0 has removed serde support as well as other features
 ```
 
 ### 1. Define Your Claims Schema
@@ -139,6 +139,11 @@ This fork makes several improvements over the original [`protobuf-web-token`](ht
 - **🔄 Migrated from `prost` to official `protobuf` crate** for better ecosystem compatibility
 - **🛡️ Removed unsafe operations** - Added `try_*` methods for all potentially failing operations
 - **🧹 Rust-only focus** - Removed Elm and TypeScript bindings for cleaner codebase
+- **🧹 API improvements**
+  - Exposed SignedToken and Token structs as public
+  - Added `fn decode_claims(bytes: &[u8]) -> Result<CLAIMS, Error>` to decode only the `CLAIMS` without verification
+  - Added `fn decode(bytes: &[u8]) -> Result<TokenData<CLAIMS>, Error>` to decode the `CLAIMS` and expiry without verification
+  - Renamed old `fn decode(token: &str) -> Result<TokenData<CLAIMS>, Error>` to `decode_str`
 - **📊 Better error handling** - More descriptive error types with context
 - **🧪 Comprehensive testing** - Added extensive test coverage including fuzzing
 - **📚 Improved documentation** - Better examples and API documentation

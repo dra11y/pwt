@@ -26,8 +26,8 @@
 //!
 //! ```toml
 //! [dependencies]
-//! pwt = "0.7"
-//! protobuf = "3.7"
+//! pwt = "0.8"
+//! protobuf = "3.7" # 4.0 has removed serde support as well as other features
 //! ```
 //!
 //! ### 1. Define Your Claims Schema
@@ -150,6 +150,11 @@
 //! - **🔄 Migrated from `prost` to official `protobuf` crate** for better ecosystem compatibility
 //! - **🛡️ Removed unsafe operations** - Added `try_*` methods for all potentially failing operations
 //! - **🧹 Rust-only focus** - Removed Elm and TypeScript bindings for cleaner codebase
+//! - **🧹 API improvements**
+//!   - Exposed SignedToken and Token structs as public
+//!   - Added `fn decode_claims(bytes: &[u8]) -> Result<CLAIMS, Error>` to decode only the `CLAIMS` without verification
+//!   - Added `fn decode(bytes: &[u8]) -> Result<TokenData<CLAIMS>, Error>` to decode the `CLAIMS` and expiry without verification
+//!   - Renamed old `fn decode(token: &str) -> Result<TokenData<CLAIMS>, Error>` to `decode_str`
 //! - **📊 Better error handling** - More descriptive error types with context
 //! - **🧪 Comprehensive testing** - Added extensive test coverage including fuzzing
 //! - **📚 Improved documentation** - Better examples and API documentation
@@ -194,7 +199,7 @@ use protobuf::{Message, MessageField};
 use base64::{Engine as _, engine::general_purpose};
 
 mod generated;
-use generated::pwt as proto;
+pub use generated::pwt::{SignedToken, Token};
 
 pub use ed25519_dalek as ed25519;
 
@@ -212,6 +217,46 @@ pub struct Verifier {
 pub struct TokenData<CLAIMS> {
     pub valid_until: SystemTime,
     pub claims: CLAIMS,
+}
+
+/// Decode **only** the claims from a PWT without verifying the signature or checking expiry.
+/// If you need expiry, use [`decode_bytes`] to get the [`TokenData`].
+///
+/// Example:
+/// ```rust,ignore
+/// let token_bytes: &[u8] = ...;
+/// let claims: MyClaims = pwt::decode_claims_only(&token_bytes)?;
+/// ```
+pub fn decode_claims<CLAIMS: Message + Default>(bytes: &[u8]) -> Result<CLAIMS, Error> {
+    let signed_token = SignedToken::parse_from_bytes(bytes)
+        .map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
+    let token_data = BytesClaims(signed_token.data).decode_metadata()?;
+    CLAIMS::parse_from_bytes(&token_data.claims)
+        .map_err(|e| Error::ProtobufDecodeError(e.to_string()))
+}
+
+/// Decode the claims and expiry ([`TokenData`]) from a PWT without verifying the signature.
+///
+/// Example:
+/// ```rust,ignore
+/// use pwt::TokenData;
+/// use std::time::SystemTime;
+/// let token_bytes: &[u8] = ...;
+/// let token_data: TokenData<MyClaims> = pwt::decode_bytes(&token_bytes)?;
+/// let claims: MyClaims = token_data.claims;
+/// let valid_until: SystemTime = token_data.valid_until;
+/// ```
+pub fn decode<CLAIMS: Message + Default>(bytes: &[u8]) -> Result<TokenData<CLAIMS>, Error> {
+    let signed_token = SignedToken::parse_from_bytes(bytes)
+        .map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
+    let token_data = BytesClaims(signed_token.data).decode_metadata()?;
+    let valid_until = token_data.valid_until;
+    let claims = CLAIMS::parse_from_bytes(&token_data.claims)
+        .map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
+    Ok(TokenData {
+        valid_until,
+        claims,
+    })
 }
 
 struct Base64Claims<'a>(&'a str);
@@ -290,7 +335,7 @@ impl Signer {
             .write_to_bytes()
             .map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
         let signature = self.key.sign(&bytes);
-        proto::SignedToken {
+        SignedToken {
             data: bytes,
             signature: signature.to_bytes().to_vec(),
             ..Default::default()
@@ -303,18 +348,18 @@ impl Signer {
         &self,
         data: &T,
         valid_for: Duration,
-    ) -> Result<proto::Token, Error> {
+    ) -> Result<Token, Error> {
         let bytes = data
             .write_to_bytes()
             .map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
-        Ok(proto::Token {
+        Ok(Token {
             valid_until: MessageField::some((SystemTime::now() + valid_for).into()),
             claims: bytes,
             ..Default::default()
         })
     }
 
-    fn sign_proto_token(&self, proto_token: &proto::Token) -> Result<(String, String), Error> {
+    fn sign_proto_token(&self, proto_token: &Token) -> Result<(String, String), Error> {
         let bytes = proto_token
             .write_to_bytes()
             .map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
@@ -352,7 +397,7 @@ impl Verifier {
         &self,
         token: &[u8],
     ) -> Result<TokenData<CLAIMS>, Error> {
-        let signed_token = proto::SignedToken::parse_from_bytes(token)
+        let signed_token = SignedToken::parse_from_bytes(token)
             .map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
         let signature =
             Signature::from_slice(&signed_token.signature).map_err(|_| Error::InvalidSignature)?;
@@ -392,7 +437,7 @@ impl Verifier {
         &self,
         token: &[u8],
     ) -> Result<CLAIMS, Error> {
-        let signed_token = proto::SignedToken::parse_from_bytes(token)
+        let signed_token = SignedToken::parse_from_bytes(token)
             .map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
         let signature =
             Signature::from_slice(&signed_token.signature).map_err(|_| Error::InvalidSignature)?;
@@ -440,7 +485,7 @@ impl<'a> Base64Claims<'a> {
 
 impl BytesClaims {
     pub fn decode_metadata(&self) -> Result<TokenData<Vec<u8>>, Error> {
-        let token = proto::Token::parse_from_bytes(&self.0)
+        let token = Token::parse_from_bytes(&self.0)
             .map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
         let valid_until: SystemTime = token
             .valid_until
@@ -460,14 +505,14 @@ fn parse_token(token: &str) -> Result<(Base64Claims<'_>, Base64Signature<'_>), E
     Ok((Base64Claims(data), Base64Signature(signature)))
 }
 
-pub fn decode<CLAIMS: Message + Default>(token: &str) -> Result<TokenData<CLAIMS>, Error> {
+pub fn decode_str<CLAIMS: Message + Default>(token: &str) -> Result<TokenData<CLAIMS>, Error> {
     let (data, _signature) = token.split_once('.').ok_or(Error::InvalidFormat)?;
     let bytes = general_purpose::URL_SAFE_NO_PAD
         .decode(data)
         .map_err(|_| Error::InvalidBase64)?;
 
-    let decoded_metadata = proto::Token::parse_from_bytes(&bytes)
-        .map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
+    let decoded_metadata =
+        Token::parse_from_bytes(&bytes).map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
     let valid_until = decoded_metadata
         .valid_until
         .into_option()
