@@ -1,6 +1,12 @@
 # Changelog
 
 
+## [0.9.0] - 2026-01-07
+
+### Fixed
+
+- Now depends on `web-time` crate instead of `std::time` so that it works in WASM (`wasm32-unknown-unknown`). Pretty useless if it doesn't work in WASM. See httsps://crates.io/crates/web-time
+
 ## [0.8.0] - 2026-01-05
 
 ### Added

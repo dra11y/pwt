@@ -147,6 +147,7 @@
 //!
 //! This fork makes several improvements over the original [`protobuf-web-token`](https://crates.io/crates/protobuf-web-token):
 //!
+//! - **🛠️ Fixed: now works in WASM** - replaced `std::time::*` with `web_time::*` - see [web-time](https://crates.io/crates/web-time) crate
 //! - **🔄 Migrated from `prost` to official `protobuf` crate** for better ecosystem compatibility
 //! - **🛡️ Removed unsafe operations** - Added `try_*` methods for all potentially failing operations
 //! - **🧹 Rust-only focus** - Removed Elm and TypeScript bindings for cleaner codebase
@@ -188,13 +189,11 @@
 //!
 //! Credit to original author [Andreas Molitor (anmolitor)](https://crates.io/users/anmolitor) for [`protobuf-web-token`](https://crates.io/crates/protobuf-web-token).
 
-use std::{
-    fmt::Display,
-    time::{Duration, SystemTime},
-};
+use std::fmt::Display;
+use web_time::{Duration, SystemTime, UNIX_EPOCH};
 
 use ed25519_dalek::{Signature, Signer as _, SigningKey, Verifier as _, VerifyingKey};
-use protobuf::{Message, MessageField};
+use protobuf::{Message, MessageField, well_known_types::timestamp::Timestamp};
 
 use base64::{Engine as _, engine::general_purpose};
 
@@ -274,6 +273,8 @@ pub enum Error {
     ProtobufDecodeError(String),
     MissingValidUntil,
     TokenExpired,
+    SystemTimeError(String),
+    OverflowError,
 }
 
 impl Signer {
@@ -352,8 +353,10 @@ impl Signer {
         let bytes = data
             .write_to_bytes()
             .map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
+        let valid_until = SystemTime::now() + valid_for;
+        let valid_until = system_time_to_timestamp(valid_until)?;
         Ok(Token {
-            valid_until: MessageField::some((SystemTime::now() + valid_for).into()),
+            valid_until: MessageField::some(valid_until),
             claims: bytes,
             ..Default::default()
         })
@@ -483,16 +486,36 @@ impl<'a> Base64Claims<'a> {
     }
 }
 
+fn system_time_to_timestamp(system_time: SystemTime) -> Result<Timestamp, Error> {
+    let duration = system_time
+        .duration_since(UNIX_EPOCH)
+        .map_err(|err| Error::SystemTimeError(err.to_string()))?;
+    let (seconds, nanos) = (duration.as_secs(), duration.subsec_nanos());
+    Ok(Timestamp {
+        seconds: seconds.min(i64::MAX as u64) as i64,
+        nanos: nanos.min(999_999_999 /* protobuf spec */) as i32,
+        ..Timestamp::default()
+    })
+}
+
+fn timestamp_field_to_system_time(field: MessageField<Timestamp>) -> Result<SystemTime, Error> {
+    timestamp_to_system_time(field.into_option().ok_or(Error::MissingValidUntil)?)
+}
+
+fn timestamp_to_system_time(valid_until: Timestamp) -> Result<SystemTime, Error> {
+    SystemTime::UNIX_EPOCH
+        .checked_add(Duration::new(
+            valid_until.seconds.max(0) as u64,
+            valid_until.nanos.clamp(0, 999_999_999) as u32,
+        ))
+        .ok_or(Error::OverflowError)
+}
+
 impl BytesClaims {
     pub fn decode_metadata(&self) -> Result<TokenData<Vec<u8>>, Error> {
         let token = Token::parse_from_bytes(&self.0)
             .map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
-        let valid_until: SystemTime = token
-            .valid_until
-            .into_option()
-            .ok_or(Error::MissingValidUntil)?
-            .try_into()
-            .map_err(|_| Error::MissingValidUntil)?;
+        let valid_until = timestamp_field_to_system_time(token.valid_until)?;
         Ok(TokenData {
             valid_until,
             claims: token.claims,
@@ -513,12 +536,7 @@ pub fn decode_str<CLAIMS: Message + Default>(token: &str) -> Result<TokenData<CL
 
     let decoded_metadata =
         Token::parse_from_bytes(&bytes).map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
-    let valid_until = decoded_metadata
-        .valid_until
-        .into_option()
-        .ok_or(Error::MissingValidUntil)?
-        .try_into()
-        .map_err(|_| Error::MissingValidUntil)?;
+    let valid_until = timestamp_field_to_system_time(decoded_metadata.valid_until)?;
     let claims = CLAIMS::parse_from_bytes(&decoded_metadata.claims)
         .map_err(|e| Error::ProtobufDecodeError(e.to_string()))?;
     Ok(TokenData {
@@ -530,25 +548,40 @@ pub fn decode_str<CLAIMS: Message + Default>(token: &str) -> Result<TokenData<CL
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::InvalidFormat => f.write_str(
+            Error::InvalidFormat => write!(
+                f,
                 "Invalid Token Format. Expected two string segments seperated by a dot ('.')",
             ),
-            Error::InvalidBase64 => f.write_str(
+            Error::InvalidBase64 => write!(
+                f,
                 "A part of the token was not valid base64 (A-Z, a-z, 0-9, -, _, no padding)",
             ),
             Error::InvalidSignature => {
-                f.write_str("The signature is not a valid Ed25519 signature")
+                write!(f, "The signature is not a valid Ed25519 signature")
             }
-            Error::SignatureMismatch => f.write_str(
+            Error::SignatureMismatch => write!(
+                f,
                 "The signature does not match the given data (probably the token was manipulated)",
             ),
-            Error::ProtobufDecodeError(e) => f.write_fmt(format_args!(
+            Error::ProtobufDecodeError(e) => write!(
+                f,
                 "The data encoded in the token did not match the expected protobuf format: {e}"
-            )),
+            ),
             Error::MissingValidUntil => {
-                f.write_str("The data encoded in the token did not include an expiry time")
+                write!(
+                    f,
+                    "The data encoded in the token did not include an expiry time"
+                )
             }
-            Error::TokenExpired => f.write_str("The token is expired"),
+            Error::TokenExpired => write!(f, "The token is expired"),
+            Error::SystemTimeError(e) => write!(
+                f,
+                "An error returned from the `duration_since` and `elapsed` methods on `SystemTime`: {e}"
+            ),
+            Error::OverflowError => write!(
+                f,
+                "an overflow error occured converting protobuf `Timestamp` to `SystemTime`"
+            ),
         }
     }
 }

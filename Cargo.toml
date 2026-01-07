@@ -1,6 +1,6 @@
 [package]
 name = "pwt"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2024"
 authors = ["Tom Grushka <tom@dra11y.com>", "andreasewering"]
 license = "	BSD-3-Clause"
@@ -16,14 +16,15 @@ categories = ["authentication", "encoding"]
 base64 = "0.22"
 ed25519-dalek = { version = "2.1.1", features = ["pem"] }
 protobuf = "3.7.2"                                        # 4.32.0 is broken!!
+web-time = "1.1.0"
 
 [build-dependencies]
 protobuf-codegen = "3.7.2" # 4.32.0 is broken!!
 
 [dev-dependencies]
 protobuf-codegen = "3.7.2"                                   # 4.32.0 is broken!!
-criterion = { version = "0.5", features = ["html_reports"] }
-josekit = "0.10.0"
+criterion = { version = "0.8", features = ["html_reports"] }
+josekit = "0.10"
 serde = "1"
 serde_json = "1"
 rand = "0.9"

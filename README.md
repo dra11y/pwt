@@ -136,6 +136,7 @@ let decoded = signer.as_verifier().verify_bytes::<Simple>(&token_bytes)?;
 
 This fork makes several improvements over the original [`protobuf-web-token`](https://crates.io/crates/protobuf-web-token):
 
+- **🛠️ Fixed: now works in WASM** - replaced `std::time::*` with `web_time::*` - see [web-time](https://crates.io/crates/web-time) crate
 - **🔄 Migrated from `prost` to official `protobuf` crate** for better ecosystem compatibility
 - **🛡️ Removed unsafe operations** - Added `try_*` methods for all potentially failing operations
 - **🧹 Rust-only focus** - Removed Elm and TypeScript bindings for cleaner codebase
